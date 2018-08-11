@@ -76,7 +76,7 @@ class Player(object):
 
     def dash_effect(self):
         #return
-        if self.juice > 2:
+        if self.juice > 3:
             self.cam.set_speed(0.2)
             self.cam.zoom_to(self.zoom_effect_amt-0.1)
             self.cam.set_target_zoom(self.zoom_effect_amt)
@@ -84,6 +84,7 @@ class Player(object):
 
             #self.trail.duration = 0.1
             #self.trail.time = 0
+        self.cam.shake(6+self.juice*2)
 
     def draw(self, screen):
 
@@ -195,8 +196,20 @@ class Player(object):
 
         if self.last_move == "up":
             new_x, new_y = pos[0], pos[1] - 1
+            if dashing and self.sprite.active_animation == "IdleRight":
+                self.sprite.start_animation("DashRight", "IdleRight")
+                self.dash_effect()
+            elif dashing:
+                self.sprite.start_animation("DashLeft", "IdleLeft")
+                self.dash_effect()
         elif self.last_move == "down":
             new_x, new_y = pos[0], pos[1] + 1
+            if dashing and self.sprite.active_animation == "IdleRight":
+                self.sprite.start_animation("DashRight", "IdleRight")
+                self.dash_effect()
+            elif dashing:
+                self.sprite.start_animation("DashLeft", "IdleLeft")
+                self.dash_effect()
         elif self.last_move == "left":
             new_x, new_y = pos[0] - 1, pos[1]
             if dashing:

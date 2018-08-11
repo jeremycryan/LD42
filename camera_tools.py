@@ -6,6 +6,7 @@ import pygame
 #   python libraries
 import time
 import random
+from math import sin
 
 class Camera(object):
     """ Camerawork class for pygame. This object supports camera effects like
@@ -51,6 +52,12 @@ class Camera(object):
         self.integral = {'x': 0, 'y': 0, 'zoom': 0}
         self.derivative = {'x': 0, 'y': 0, 'zoom': 0}
 
+        self.time = 0
+        self.shake_amplitude = 0
+
+    def shake(self, intensity):
+        self.shake_amplitude = intensity
+
 
     def set_pan_pid(self, p, i, d):
         """ Modify default pid constants for camera pan """
@@ -83,9 +90,13 @@ class Camera(object):
 
         returns new_dt: modified time step to pass into update calls, seconds"""
 
+        self.shake_amplitude *= 0.03**dt
+
         #   Update camera according to actual time step
         self.update_zoom(dt)
         self.update_pan(dt)
+
+        self.time += dt
 
         #   Return modified time step
         new_dt = dt * self.speed
@@ -212,7 +223,8 @@ class Camera(object):
         #   Blit zoomed surface to the zoom surface
         x_blit = int(self.zoom_width/2 - self.pos[0])
         y_blit = int(self.zoom_height/2 - self.pos[1])
-        zoom_surf.blit(surface, (x_blit, y_blit))
+        yoff = self.shake_amplitude * sin(self.time*6.28 * 6)
+        zoom_surf.blit(surface, (x_blit, y_blit+yoff))
 
         #   Scale the zoom surface to the same size as the output
         zoom_surf = pygame.transform.scale(zoom_surf,
