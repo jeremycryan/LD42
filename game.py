@@ -40,10 +40,14 @@ class Player(object):
     def draw(self, screen):
         self.sprite.draw(screen)
 
-        dash = pygame.Surface((32, 32))
+        dash_pos = self.dash_pos()
+        xdif = dash_pos[0] - self.pos[0]
+        ydif = dash_pos[1] - self.pos[1]
+
+        dash = pygame.Surface((32*abs(xdif)+64, 32*abs(ydif)+64))
         dash.fill((255, 255, 255))
         dash.set_alpha(100)
-        dash_pos = self.dash_pos()
+
         x = dash_pos[0] * TILE_WIDTH + TILE_XOFF
         y = dash_pos[1] * TILE_HEIGHT + TILE_YOFF
 
@@ -52,7 +56,20 @@ class Player(object):
         self.focus_pos = [actdn*x+ctdn*self.sprite.x_pos,
                         actdn*y+ctdn*self.sprite.y_pos]
 
+        if xdif > 0:
+            x = self.sprite.x_pos
+        if ydif > 0:
+            y = self.sprite.y_pos
         screen.blit(dash, (x, y))
+
+    def quarter_positions(self, pos):
+        xoff = [0, 1]
+        yoff = [0, 1]
+        poses = []
+        for x in xoff:
+            for y in yoff:
+                poses.append((pos[0]+x, pos[1]+y))
+        return poses
 
     def update(self, dt):
         self.sprite.update(dt)
@@ -69,6 +86,14 @@ class Player(object):
 
     def do_dash(self):
         x, y = self.dash_pos(dashing=True)
+
+        # if self.juice >= 5:
+        #     for xoff in [-1, 0, 1]:
+        #         for yoff in [-1, 0, 1]:
+        #             check_pos = self.pos[0] + xoff, self.pos[1] + yoff
+        #             self.dash_pos_recurse(check_pos, self.juice, dashing=True)
+
+
         self.juice = 0
         return x, y
 
@@ -79,20 +104,20 @@ class Player(object):
 
     def dash_pos_recurse(self, pos, dist, dashing=False):
 
-        if pos[0] < 0 or pos[1] < 0 or \
-            pos[0] > MAP_WIDTH - 1 or pos[1] > MAP_HEIGHT - 1:
-            return 0
-
-        cur_cell = self.map.get_cell(pos[0], pos[1])
-        if dist == 0:
-            if "rock" in cur_cell.contents:
+        for qpos in self.quarter_positions(pos):
+            if qpos[0] < 0 or qpos[1] < 0 or \
+                qpos[0] > MAP_WIDTH - 1 or qpos[1] > MAP_HEIGHT - 1:
                 return 0
+
+        if dist == 0:
             return pos
 
-        if dashing:
-            if "rock" in cur_cell.contents:
-                cur_cell.contents.remove("rock")
-                print("REMOVE ROCK")
+        for qpos in self.quarter_positions((pos[0], pos[1])):
+            cur_cell = self.map.get_cell(qpos[0], qpos[1])
+            if dashing:
+                for item in BREAKABLE:
+                    if item in cur_cell.contents:
+                        cur_cell.contents.remove("rock")
 
         if self.last_move == "up":
             new_x, new_y = pos[0], pos[1] - 1
@@ -105,20 +130,27 @@ class Player(object):
         else:
             return pos
 
+        for qpos in self.quarter_positions((new_x, new_y)):
+            if 0 <= qpos[0] and qpos[0] <= MAP_WIDTH-1 and \
+                0 <= qpos[1] and qpos[1] <= MAP_HEIGHT-1:
+                cur_cell = self.map.get_cell(qpos[0], qpos[1])
+                if dashing:
+                    for item in BREAKABLE:
+                        if item in cur_cell.contents:
+                            cur_cell.contents.remove("rock")
+
         ans = self.dash_pos_recurse((new_x, new_y), dist - 1, dashing=dashing)
         if ans != 0:
             return ans
         else:
-            cur_cell = self.map.get_cell(pos[0], pos[1])
-            if "rock" not in cur_cell.contents:
-                return pos
-            return 0
+            return pos
 
     def test_pickup(self, map):
-        cur_cell = map.get_cell(self.pos[0], self.pos[1])
-        if "milk" in cur_cell.contents:
-            cur_cell.contents.remove("milk")
-            self.pickup_milk()
+        for qpos in self.quarter_positions(self.pos):
+            cur_cell = map.get_cell(qpos[0], qpos[1])
+            if "milk" in cur_cell.contents:
+                cur_cell.contents.remove("milk")
+                self.pickup_milk()
 
     def pickup_milk(self):
         self.juice = min(self.juice + 1, self.max_juice)
@@ -129,8 +161,11 @@ class Player(object):
         for direction in self.key_dict:
             if self.key_dict[direction] in keydowns:
                 self.apply_movement(direction, map)
+                return True
+        return False
 
     def apply_movement(self, direction, map):
+
 
         if direction == "up":
             new_x, new_y = self.pos[0], self.pos[1] - 1
@@ -145,14 +180,17 @@ class Player(object):
         else:
             new_x, new_y = self.pos[0], self.pos[1]
 
-        if new_x < 0 or new_y < 0 or \
-            new_x > MAP_WIDTH - 1 or new_y > MAP_HEIGHT - 1:
-            #self.last_move = "rest"
-            return 0
+        for qpos in self.quarter_positions((new_x, new_y)):
 
-        new_cell = map.get_cell(new_x, new_y)
-        if "rock" in new_cell.contents:
-            return 0
+            if qpos[0] < 0 or qpos[1] < 0 or \
+                qpos[0] > MAP_WIDTH - 1 or qpos[1]> MAP_HEIGHT - 1:
+                self.last_move = "rest"
+                return 0
+
+            new_cell = map.get_cell(qpos[0], qpos[1])
+            if "rock" in new_cell.contents and direction != "dash":
+                self.last_move = "rest"
+                return 0
 
         else:
             self.pos = new_x, new_y
@@ -165,9 +203,9 @@ class Game(object):
     def __init__(self):
         pygame.init()
 
-        self.display = pygame.display.set_mode((640, 480))
+        self.display = pygame.display.set_mode((DISPLAY_WIDTH, DISPLAY_HEIGHT))
         self.cam = Camera(self.display)
-        self.screen = pygame.Surface((640, 480))
+        self.screen = pygame.Surface((GAME_WIDTH, GAME_HEIGHT))
 
         #   Game stuff
         self.map = Map(MAP_WIDTH, MAP_HEIGHT)
@@ -187,6 +225,7 @@ class Game(object):
 
         self.player = Player(self.map, [2, 2])
         self.player.sprite.start_animation('Idle')
+        self.since_rock_spawn = 0
 
         objects_layer_0 = [self.map]
         objects_layer_1 = []
@@ -200,8 +239,6 @@ class Game(object):
         time.sleep(0.01)
 
         self.cam.set_target_zoom(1.5)
-
-        self.map.spawn_rock()
 
         while True:
 
@@ -217,13 +254,12 @@ class Game(object):
 
             #   PLAYER MOVEMENT/UPDATE
             if len(events):
-                self.player.test_movement(events, self.map)
+                turnover = self.player.test_movement(events, self.map)
+                self.turnover()
                 print([i.key for i in events])
             self.player.test_pickup(self.map)
             self.juice_bar.cur_value = self.player.juice
 
-            #   DROPPING THINGS
-            self.spawn_items()
 
 
             self.cam.set_pan_pid(3, 0.1, -0.3)
@@ -249,11 +285,22 @@ class Game(object):
 
             pygame.display.flip()
 
-    def spawn_items(self):
+    def spawn_milk(self):
 
         num_milk = self.map.get_count("milk")
-        if num_milk < 1:
+        if num_milk < 3:
             self.map.spawn_milk()
+
+    def turnover(self):
+
+        self.spawn_milk()
+
+        self.since_rock_spawn += 1
+        if self.since_rock_spawn >=3:
+            dont = [self.player.quarter_positions(self.player.pos)]
+            print(dont)
+            self.map.spawn_rock(dont=dont)
+            self.since_rock_spawn = 0
 
 
 def p(path):

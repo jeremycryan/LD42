@@ -1,13 +1,22 @@
 
 
+#   Display
+
+GAME_WIDTH, GAME_HEIGHT = 640, 480
+DISPLAY_WIDTH, DISPLAY_HEIGHT = 640, 480
+
 #   Map stuff
 
 MAP_WIDTH, MAP_HEIGHT = (12, 9)
 TILE_HEIGHT, TILE_WIDTH = 32, 32
 TILE_XOFF, TILE_YOFF = 100, 100
 
+
 #   UI
 JUICE_BAR_POS = (30, 20)
 
 #   Game parameters
 MAX_JUICE = 7
+
+#   Game interactions
+BREAKABLE = ["rock"]
