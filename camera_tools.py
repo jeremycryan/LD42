@@ -62,7 +62,7 @@ class Camera(object):
 
         #   Update pids dictionary
         self.pids['x'] = (p, i, d)
-        self.pidx['y'] = (p, i, d)
+        self.pids['y'] = (p, i, d)
 
     def set_zoom_pid(self, p, i, d):
         """ Modify default pid constants for camera zoom """

@@ -2,6 +2,7 @@
 
 import pygame
 import random
+from game import p
 from sprite_tools import *
 from constants import *
 
@@ -18,10 +19,10 @@ class Map(object):
 
         print(self)
 
-        self.blank_tile = pygame.image.load('map_blank.png')
-        self.gone_tile = pygame.image.load('map_gone.png')
-        self.rock = pygame.image.load('rock.png')
-        self.milk = pygame.image.load('milk.png')
+        self.blank_tile = pygame.image.load(p('map_blank.png'))
+        self.gone_tile = pygame.image.load(p('map_gone.png'))
+        self.rock = pygame.image.load(p('rock.png'))
+        self.milk = pygame.image.load(p('milk.png'))
         self.img_dict = {"tile": self.blank_tile,
             "rock": self.rock, "milk": self.milk}
 
