@@ -119,9 +119,13 @@ class Sprite(object):
         #   Set initial flags and values
         self.x_pos = 0
         self.y_pos = 0
+        self.target_x_pos = 0
+        self.target_y_pos = 0
         self.paused = False
         self.paused_at = 0
         self.active_animation = None
+        self.next_animation = None
+        self.play_next = 0
 
         #   Set frames per second
         self.fps = fps
@@ -161,7 +165,7 @@ class Sprite(object):
             self.pause()
 
 
-    def start_animation(self, name):
+    def start_animation(self, name, next_animation = None):
         """ Starts the animation of the chosen name. """
 
         #   Unpause animatino if paused
@@ -174,6 +178,7 @@ class Sprite(object):
 
         #   Change active animation
         self.active_animation = name
+        self.next_animation = next_animation
 
 
     def update(self, dt):
@@ -183,17 +188,15 @@ class Sprite(object):
         self.now += dt
 
 
+    def go_to_next_animation(self):
+        if self.next_animation:
+            self.active_animation = self.next_animation
+        self.next_animation = None
+        self.play_next = False
+
+
     def draw(self, surf):
         """ Draws the current frame onto a surface. """
-
-        #   Raise an error if the active animation isn't in animations
-        if not self.active_animation in self.animations:
-            print("The active animation %s couldn't be found." % \
-                self.active_animation)
-            raise
-
-        #   Load up the active spritesheet
-        active_spritesheet = self.animations[self.active_animation]
 
         #   Determine what frame of the animation you should be on
         now = self.now
@@ -205,6 +208,22 @@ class Sprite(object):
             elapsed = now - self.last_start
         frame_time = 1.0/self.fps
         frames_count = int(elapsed/frame_time)
+
+        if frames_count%self.animations[self.active_animation].frame_num == 0 and self.play_next:
+            self.go_to_next_animation()
+
+        #   Raise an error if the active animation isn't in animations
+        if not self.active_animation in self.animations:
+            print("The active animation %s couldn't be found." % \
+                self.active_animation)
+            raise
+
+        #   Load up the active spritesheet
+        active_spritesheet = self.animations[self.active_animation]
+
+        if self.next_animation and \
+            frames_count >= active_spritesheet.frame_num - 1:
+            self.play_next = True
 
         #   Draw the animation on the surface
         frame_to_draw = active_spritesheet.get_frame(frames_count)

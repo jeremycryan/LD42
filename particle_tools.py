@@ -7,6 +7,7 @@ import pygame
 import random
 import time
 from math import sin, cos, pi
+from copy import deepcopy
 
 ################################################################################
 ########################## PARTICLE DEFINITION #################################
@@ -36,6 +37,8 @@ class Particle(object):
         #   TODO make width and height variable on image used
         self.width = width     #   Width of particle in pixels
         self.height = height    #   Height pf particle in pixels
+
+        self.speed = 0
 
         #   Potential parameters:
         #   - Initial position
@@ -297,6 +300,14 @@ class LinearMotionEffect(ParticleBehavior):
         self.speed = init_speed
 
 
+    def on_apply(self, particle):
+        """ Applies any immediate alterations to the particle when the effect is
+        added. """
+
+        particle.speed = self.init_speed
+        particle.speed = self.init_speed
+
+
     def update(self, particle, dt):
         """ Applies the animation effect to the particle.
 
@@ -306,10 +317,10 @@ class LinearMotionEffect(ParticleBehavior):
         #   Change the particle's position based on the speed. Uses an average
         #   of speeds before and after the tick to help mitigate changes in
         #   behavior at different loop speeds.
-        old_speed = self.speed
+        old_speed = particle.speed
         new_speed = old_speed + self.accel*dt
         avg_speed = 0.5 * (old_speed + new_speed)
-        self.speed = new_speed
+        particle.speed = new_speed
 
         #   Apply position change to x and y positions
         dir_rad = 2 * pi * self.direction
@@ -514,6 +525,9 @@ class ParticleEffect(object):
             if self.cooldowns[idx] > self.periods[idx]:
                 self.cooldowns[idx] -= self.periods[idx]
                 self.spawn_particle(item)
+
+    def copy(self):
+        return deepcopy(self)
 
 
 ################################################################################

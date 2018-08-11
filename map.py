@@ -23,7 +23,7 @@ class Map(object):
         self.blank_tile = pygame.transform.scale(self.blank_tile,
             (TILE_WIDTH, TILE_HEIGHT))
         self.gone_tile = pygame.image.load(p('map_gone.png'))
-        self.rock = pygame.image.load(p('rock.png'))
+        self.rock = pygame.image.load(p('rock1.png'))
         self.milk = pygame.image.load(p('milk.png'))
         self.img_dict = {"tile": self.blank_tile,
             "rock": self.rock, "milk": self.milk}
@@ -57,14 +57,14 @@ class Map(object):
         pass
 
     def draw(self, screen):
-
         for cell in self.get_all_cells():
-            if "rock" not in cell.contents:
-                for item in cell.contents:
-                    img = self.img_dict[item]
-                    x = cell.x * TILE_WIDTH + TILE_XOFF
-                    y = cell.y * TILE_HEIGHT + TILE_YOFF
-                    screen.blit(img, (x, y))
+            for item in cell.contents:
+                img = self.img_dict[item]
+                x = cell.x * TILE_WIDTH + TILE_XOFF
+                y = cell.y * TILE_HEIGHT + TILE_YOFF
+                if item == "rock":
+                    y += ROCK_Y_OFFSET
+                screen.blit(img, (x, y))
 
     def spawn_rock(self, dont = -1):
         cells = self.get_all_empty_cells()

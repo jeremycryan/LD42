@@ -16,14 +16,25 @@ from particle_tools import *
 
 class Player(object):
 
-    def __init__(self, map, pos = [2, 2]):
+    def __init__(self, map, pos = [2, 2], cam = None):
         self.pos = pos
         self.focus_pos = (0, 0)
+        self.cam = cam
 
-        idle = SpriteSheet(p('player_idle.png'), (4, 1), 5)
+        self.zoom_effect_amt = 1.5
 
-        self.sprite = Sprite(fps = 8)
-        self.sprite.add_animation({'Idle': idle})
+        idle_right = SpriteSheet(p('ram_idle_right.png'), (8, 1), 8)
+        idle_left = SpriteSheet(p('ram_idle_right.png'), (8, 1), 8)
+        idle_left.reverse(1, 0)
+        dash_right = SpriteSheet(p('ram_dash_right.png'), (7, 1), 7)
+        dash_left = SpriteSheet(p('ram_dash_right.png'), (7, 1), 7)
+        dash_left.reverse(1, 0)
+
+        self.sprite = Sprite(fps = 10)
+        self.sprite.add_animation({'IdleRight': idle_right,
+                                    'IdleLeft': idle_left,
+                                    'DashRight': dash_right,
+                                    'DashLeft': dash_left})
 
         self.key_dict = {'up': 273,
             'down': 274,
@@ -37,8 +48,41 @@ class Player(object):
 
         self.map = map
 
+        self.rock_bit_1 = Particle(path='square', width = 5, height = 5, color = (45, 55, 20))
+        self.rock_bit_2 = Particle(path= 'square', width = 7, height = 7, color = (145, 125, 60))
+        self.rock_bit_3 = Particle(path = 'square', width = 4, height = 4, color = (110, 110, 106))
+        rocks = [self.rock_bit_1, self.rock_bit_2, self.rock_bit_3]
+        self.rock_burst = ParticleEffect(pos = (300, 300), width = 32, height = 32)
+        for i, item in enumerate(rocks):
+            item.apply_behavior(LinearMotionEffect(direction = -0.25*i, init_speed = 100, accel = 50))
+            item.apply_behavior(OpacityEffect(decay = 2.5))
+            self.rock_burst.add_particle_type(item, 0.006)
+
+        self.spark = Particle(path = 'square', width = 5, height = 5, color = (255, 255, 255))
+        self.trail = ParticleEffect(pos = (0, 0, 0), width = 32, height = 32)
+        self.spark.apply_behavior(OpacityEffect(decay = 1.5))
+        self.trail.add_particle_type(self.spark, 0.001)
+        self.trail.duration = 0.01
+        #self.rock_effect((TILE_XOFF, TILE_YOFF))
+        self.particles = [self.trail]
+
+    def rock_effect(self, pos):
+        p = self.rock_burst.copy()
+        p.duration = 0.0001
+        p.pos = pos
+        self.particles.append(p)
+
+    def dash_effect(self):
+        #return
+        self.cam.set_speed(0.2)
+        self.cam.set_target_zoom(self.zoom_effect_amt)
+        self.cam.set_zoom_pid(30, 0.0, 0)
+
+        if self.juice > 2:
+            self.trail.duration = 0.1
+            self.trail.time = 0
+
     def draw(self, screen):
-        self.sprite.draw(screen)
 
         dash_pos = self.dash_pos()
         xdif = dash_pos[0] - self.pos[0]
@@ -54,13 +98,17 @@ class Player(object):
         ctdn = 0.8  #   "Centeredness" on player over shadow
         actdn = 1 - ctdn
         self.focus_pos = [actdn*x+ctdn*self.sprite.x_pos,
-                        actdn*y+ctdn*self.sprite.y_pos]
+                        actdn*y+ctdn*(self.sprite.y_pos - PLAYER_Y_OFFSET)]
 
         if xdif > 0:
-            x = self.sprite.x_pos
+            x = self.sprite.target_x_pos
         if ydif > 0:
-            y = self.sprite.y_pos
+            y = self.sprite.target_y_pos - PLAYER_Y_OFFSET
         screen.blit(dash, (x, y))
+        self.sprite.draw(screen)
+
+        for p in self.particles:
+            p.draw(screen)
 
     def quarter_positions(self, pos):
         xoff = [0, 1]
@@ -72,8 +120,18 @@ class Player(object):
         return poses
 
     def update(self, dt):
+        for p in self.particles:
+            p.update(dt)
         self.sprite.update(dt)
         self.update_movement(dt)
+
+        if self.cam.zoom > self.zoom_effect_amt - 0.000001:
+            self.cam.set_target_zoom(1.0)
+            self.cam.set_zoom_pid(3, 1, 0.2)
+            self.cam.set_speed(1.0)
+
+        self.trail.pos = (self.sprite.x_pos + TILE_WIDTH,
+            self.sprite.y_pos - PLAYER_Y_OFFSET + TILE_HEIGHT)
 
     def update_movement(self, dt):
 
@@ -81,8 +139,15 @@ class Player(object):
         target_y = self.pos[1] * TILE_HEIGHT + TILE_YOFF
 
 
-        self.sprite.x_pos = target_x
-        self.sprite.y_pos = target_y
+        self.sprite.target_x_pos = target_x
+        self.sprite.target_y_pos = target_y + PLAYER_Y_OFFSET
+
+        xdif = self.sprite.target_x_pos - self.sprite.x_pos
+        ydif = self.sprite.target_y_pos - self.sprite.y_pos
+
+        rat = 50
+        self.sprite.x_pos += xdif*rat*dt
+        self.sprite.y_pos += ydif*rat*dt
 
     def do_dash(self):
         x, y = self.dash_pos(dashing=True)
@@ -117,7 +182,8 @@ class Player(object):
             if dashing:
                 for item in BREAKABLE:
                     if item in cur_cell.contents:
-                        cur_cell.contents.remove("rock")
+                        cur_cell.contents.remove(item)
+
 
         if self.last_move == "up":
             new_x, new_y = pos[0], pos[1] - 1
@@ -125,8 +191,14 @@ class Player(object):
             new_x, new_y = pos[0], pos[1] + 1
         elif self.last_move == "left":
             new_x, new_y = pos[0] - 1, pos[1]
+            if dashing:
+                self.sprite.start_animation("DashLeft", "IdleLeft")
+                self.dash_effect()
         elif self.last_move == "right":
             new_x, new_y = pos[0] + 1, pos[1]
+            if dashing:
+                self.sprite.start_animation("DashRight", "IdleRight")
+                self.dash_effect()
         else:
             return pos
 
@@ -137,7 +209,11 @@ class Player(object):
                 if dashing:
                     for item in BREAKABLE:
                         if item in cur_cell.contents:
-                            cur_cell.contents.remove("rock")
+                            cur_cell.contents.remove(item)
+                            spos = (qpos[0] * TILE_WIDTH + TILE_XOFF,
+                                qpos[1] * TILE_HEIGHT + TILE_YOFF)
+                            print(spos)
+                            self.rock_effect(spos)
 
         ans = self.dash_pos_recurse((new_x, new_y), dist - 1, dashing=dashing)
         if ans != 0:
@@ -173,8 +249,10 @@ class Player(object):
             new_x, new_y = self.pos[0], self.pos[1] + 1
         elif direction == "left":
             new_x, new_y = self.pos[0] - 1, self.pos[1]
+            self.sprite.start_animation('IdleLeft')
         elif direction == "right":
             new_x, new_y = self.pos[0] + 1, self.pos[1]
+            self.sprite.start_animation('IdleRight')
         elif direction == "dash":
             new_x, new_y = self.do_dash()
         else:
@@ -184,12 +262,12 @@ class Player(object):
 
             if qpos[0] < 0 or qpos[1] < 0 or \
                 qpos[0] > MAP_WIDTH - 1 or qpos[1]> MAP_HEIGHT - 1:
-                self.last_move = "rest"
+                self.last_move = direction
                 return 0
 
             new_cell = map.get_cell(qpos[0], qpos[1])
             if "rock" in new_cell.contents and direction != "dash":
-                self.last_move = "rest"
+                self.last_move = direction
                 return 0
 
         else:
@@ -223,9 +301,10 @@ class Game(object):
         #self.cam.set_target_zoom(2.0)
         #self.cam.set_target_center((0, 0))
 
-        self.player = Player(self.map, [2, 2])
-        self.player.sprite.start_animation('Idle')
+        self.player = Player(self.map, [2, 2], cam=self.cam)
+        self.player.sprite.start_animation('IdleRight')
         self.since_rock_spawn = 0
+        self.spawn_milk()
 
         objects_layer_0 = [self.map]
         objects_layer_1 = []
@@ -238,7 +317,7 @@ class Game(object):
         then = time.time()
         time.sleep(0.01)
 
-        self.cam.set_target_zoom(1.5)
+        self.cam.zoom_to(1.0)
 
         while True:
 
@@ -264,7 +343,7 @@ class Game(object):
 
             self.cam.set_pan_pid(3, 0.1, -0.3)
             self.cam.set_target_center(self.player.focus_pos)
-            self.cam.set_target_zoom(1.5 - 0.01*self.player.juice)
+            #self.cam.set_target_zoom(1.0 - 0.01*self.player.juice)
 
 
             #   DRAW TO SCREEN
@@ -288,8 +367,9 @@ class Game(object):
     def spawn_milk(self):
 
         num_milk = self.map.get_count("milk")
-        if num_milk < 3:
+        while num_milk < 3:
             self.map.spawn_milk()
+            num_milk = self.map.get_count("milk")
 
     def turnover(self):
 
@@ -297,8 +377,7 @@ class Game(object):
 
         self.since_rock_spawn += 1
         if self.since_rock_spawn >=3:
-            dont = [self.player.quarter_positions(self.player.pos)]
-            print(dont)
+            dont = self.player.quarter_positions(self.player.pos)
             self.map.spawn_rock(dont=dont)
             self.since_rock_spawn = 0
 
