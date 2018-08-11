@@ -54,33 +54,36 @@ class Player(object):
         rocks = [self.rock_bit_1, self.rock_bit_2, self.rock_bit_3]
         self.rock_burst = ParticleEffect(pos = (300, 300), width = 32, height = 32)
         for i, item in enumerate(rocks):
-            item.apply_behavior(LinearMotionEffect(direction = -0.25*i, init_speed = 100, accel = 50))
-            item.apply_behavior(OpacityEffect(decay = 2.5))
+            item.apply_behavior(LinearMotionEffect(direction = -0.25*i, init_speed = 200, accel = 50))
+            item.apply_behavior(OpacityEffect(decay = 5))
             self.rock_burst.add_particle_type(item, 0.006)
 
         self.spark = Particle(path = 'square', width = 5, height = 5, color = (255, 255, 255))
         self.trail = ParticleEffect(pos = (0, 0, 0), width = 32, height = 32)
         self.spark.apply_behavior(OpacityEffect(decay = 1.5))
         self.trail.add_particle_type(self.spark, 0.001)
-        self.trail.duration = 0.01
+        self.trail.duration = 0.0001
         #self.rock_effect((TILE_XOFF, TILE_YOFF))
         self.particles = [self.trail]
 
+        self.player_surf = pygame.Surface((GAME_WIDTH, GAME_HEIGHT))
+
     def rock_effect(self, pos):
         p = self.rock_burst.copy()
-        p.duration = 0.0001
+        p.duration = 0.1
         p.pos = pos
         self.particles.append(p)
 
     def dash_effect(self):
         #return
-        self.cam.set_speed(0.2)
-        self.cam.set_target_zoom(self.zoom_effect_amt)
-        self.cam.set_zoom_pid(30, 0.0, 0)
-
         if self.juice > 2:
-            self.trail.duration = 0.1
-            self.trail.time = 0
+            self.cam.set_speed(0.2)
+            self.cam.zoom_to(self.zoom_effect_amt-0.1)
+            self.cam.set_target_zoom(self.zoom_effect_amt)
+            self.cam.set_zoom_pid(20, 0.0, 0)
+
+            #self.trail.duration = 0.1
+            #self.trail.time = 0
 
     def draw(self, screen):
 
@@ -145,7 +148,12 @@ class Player(object):
         xdif = self.sprite.target_x_pos - self.sprite.x_pos
         ydif = self.sprite.target_y_pos - self.sprite.y_pos
 
-        rat = 50
+        rat=20
+        if self.sprite.active_animation in ["DashLeft","DashRight","DashUp","DashDown"]:
+            if self.juice > 2:
+                rat = 20
+            else:
+                rat = 50
         self.sprite.x_pos += xdif*rat*dt
         self.sprite.y_pos += ydif*rat*dt
 
