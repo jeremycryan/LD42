@@ -27,6 +27,7 @@ class Map(object):
         self.milk = pygame.image.load(p('milk.png'))
         self.img_dict = {"tile": self.blank_tile,
             "rock": self.rock, "milk": self.milk}
+        self.bkgnd = pygame.image.load(p("arena.png"))
 
     def get_cell(self, x, y):
         return self.cells[y][x]
@@ -57,6 +58,7 @@ class Map(object):
         pass
 
     def draw(self, screen):
+        screen.blit(self.bkgnd, (0, 0))
         for cell in self.get_all_cells():
             for item in cell.contents:
                 img = self.img_dict[item]
