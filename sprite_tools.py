@@ -227,7 +227,6 @@ class Sprite(object):
 
         #   Draw the animation on the surface
         frame_to_draw = active_spritesheet.get_frame(frames_count)
-        print(frame_to_draw)
         surf.blit(frame_to_draw, (int(self.x_pos), int(self.y_pos)))
 
 

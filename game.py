@@ -163,7 +163,7 @@ class Player(object):
         xdif = self.sprite.target_x_pos - self.sprite.x_pos
         ydif = self.sprite.target_y_pos - self.sprite.y_pos
 
-        rat=20
+        rat=15
         if self.sprite.active_animation in ["DashLeft","DashRight","DashUp","DashDown"]:
             if self.juice > 2:
                 rat = 20
@@ -486,7 +486,6 @@ class Game(object):
                     self.high_score = max(self.high_score, self.player.score)
                     pygame.mixer.music.fadeout(1500)
                     break
-                print([i.key for i in events])
 
             self.player.test_pickup(self.map)
             self.juice_bar.target_value = self.player.juice
