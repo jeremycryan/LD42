@@ -326,6 +326,7 @@ class Game(object):
 
         pygame.mixer.pre_init(44100, -16, 2, 512)
         pygame.init()
+        self.mus = pygame.mixer.music.load(p("LD42.wav"))
         #pygame.mixer.init()
 
         self.display = pygame.display.set_mode((DISPLAY_WIDTH, DISPLAY_HEIGHT))
@@ -431,8 +432,8 @@ class Game(object):
 
             pygame.display.flip()
 
-
-
+        pygame.mixer.music.set_volume(0.4)
+        pygame.mixer.music.play(loops=999)
         objects_layer_2.append(self.player)
         layers = [objects_layer_0,
             objects_layer_1,
