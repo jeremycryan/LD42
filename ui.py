@@ -4,7 +4,7 @@ import pygame
 
 class Bar(object):
 
-    def __init__(self, max_val, color = (95, 135, 240),
+    def __init__(self, max_val, color = [95, 135, 240],
         width = 20, height = 100, start_value = 0, pos = (0, 0)):
 
         self.max_val = max_val
@@ -16,6 +16,8 @@ class Bar(object):
         self.pos = pos
 
         self.cur_value = start_value
+        self.target_value = start_value
+        self.i = 0
 
     def draw(self, surf):
 
@@ -42,4 +44,12 @@ class Bar(object):
                 pos[1]+off+self.frame_y_border))
 
     def update(self, dt):
-        pass
+
+        dv = self.target_value - self.cur_value
+        self.i += dv*dt
+
+        d = 15.0
+        i = 1
+        self.cur_value += d*dv*dt + i*self.i*dt
+
+        self.color[0]

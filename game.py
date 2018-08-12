@@ -94,7 +94,7 @@ class Player(object):
 
         dash = pygame.Surface((32*abs(xdif)+64, 32*abs(ydif)+64))
         dash.fill((255, 255, 255))
-        dash.set_alpha(100)
+        dash.set_alpha(75)
 
         x = dash_pos[0] * TILE_WIDTH + TILE_XOFF
         y = dash_pos[1] * TILE_HEIGHT + TILE_YOFF
@@ -233,7 +233,6 @@ class Player(object):
                             cur_cell.contents.remove(item)
                             spos = (qpos[0] * TILE_WIDTH + TILE_XOFF,
                                 qpos[1] * TILE_HEIGHT + TILE_YOFF)
-                            print(spos)
                             self.rock_effect(spos)
 
         ans = self.dash_pos_recurse((new_x, new_y), dist - 1, dashing=dashing)
@@ -287,7 +286,8 @@ class Player(object):
                 return 0
 
             new_cell = map.get_cell(qpos[0], qpos[1])
-            if "rock" in new_cell.contents and direction != "dash":
+            if ("rock1" in new_cell.contents or "rock2" in new_cell.contents \
+                or "rock3" in new_cell.contents) and direction != "dash":
                 self.last_move = direction
                 return 0
 
@@ -308,6 +308,7 @@ class Game(object):
 
         #   Game stuff
         self.map = Map(MAP_WIDTH, MAP_HEIGHT)
+        self.sky = pygame.image.load(p("backdrop.png"))
 
         #   Interface
         self.juice_bar = Bar(MAX_JUICE, start_value = 0, pos = JUICE_BAR_POS)
@@ -345,6 +346,9 @@ class Game(object):
             #   PYGAME EVENTS
             pygame.event.pump()
             events = pygame.event.get(pygame.KEYDOWN)
+            pygame.event.clear()
+
+            print(pygame.key.get_pressed())
 
             #   TIME STUFF
             now = time.time()
@@ -358,7 +362,7 @@ class Game(object):
                 self.turnover()
                 print([i.key for i in events])
             self.player.test_pickup(self.map)
-            self.juice_bar.cur_value = self.player.juice
+            self.juice_bar.target_value = self.player.juice
 
 
 
@@ -368,7 +372,10 @@ class Game(object):
 
 
             #   DRAW TO SCREEN
-            self.screen.fill((50, 50, 50))
+            self.screen.fill((0, 0, 0))
+            self.display.fill((0, 0, 0))
+            self.display.blit(self.sky, (-self.cam.pos[0]*0.2, -self.cam.pos[1]*0.1))
+            self.screen.set_colorkey((0, 0, 0))
 
             for layer in layers:
                 for item in layer:
@@ -397,10 +404,14 @@ class Game(object):
         self.spawn_milk()
 
         self.since_rock_spawn += 1
-        if self.since_rock_spawn >=3:
+        if self.since_rock_spawn >=4:
             dont = self.player.quarter_positions(self.player.pos)
-            self.map.spawn_rock(dont=dont)
+            new_rock_x, new_rock_y = self.map.spawn_rock(dont=dont)
+            self.rock_spawn_effect(new_rock_x, new_rock_y)
             self.since_rock_spawn = 0
+
+    def rock_spawn_effect(self, x, y):
+        pass
 
 
 def p(path):

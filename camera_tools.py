@@ -91,6 +91,8 @@ class Camera(object):
         returns new_dt: modified time step to pass into update calls, seconds"""
 
         self.shake_amplitude *= 0.03**dt
+        if self.shake_amplitude < 2:
+            self.shake_amplitude = 0
 
         #   Update camera according to actual time step
         self.update_zoom(dt)
@@ -229,8 +231,10 @@ class Camera(object):
         #   Scale the zoom surface to the same size as the output
         zoom_surf = pygame.transform.scale(zoom_surf,
             (self.output_width, self.output_height))
+        zoom_surf.set_colorkey((0, 0, 0))
 
         #   Draw the screen onto the output
+        self.output_display.set_colorkey((0, 0, 0))
         self.output_display.blit(zoom_surf, (0, 0))
 
 

@@ -13,6 +13,8 @@ MAP_WIDTH, MAP_HEIGHT = (16, 12)
 TILE_HEIGHT, TILE_WIDTH = 32, 32
 TILE_XOFF, TILE_YOFF = 94, 157
 
+#   rocks
+ROCKS = ["rock1", "rock2", "rock3"]
 
 #   UI
 JUICE_BAR_POS = (30, 20)
@@ -21,4 +23,4 @@ JUICE_BAR_POS = (30, 20)
 MAX_JUICE = 7
 
 #   Game interactions
-BREAKABLE = ["rock"]
+BREAKABLE = ROCKS

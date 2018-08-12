@@ -23,11 +23,17 @@ class Map(object):
         self.blank_tile = pygame.transform.scale(self.blank_tile,
             (TILE_WIDTH, TILE_HEIGHT))
         self.gone_tile = pygame.image.load(p('map_gone.png'))
-        self.rock = pygame.image.load(p('rock1.png'))
+        self.rock1 = pygame.image.load(p('rock1.png'))
+        self.rock2 = pygame.image.load(p('rock2.png'))
+        self.rock3 = pygame.image.load(p('rock3.png'))
         self.milk = pygame.image.load(p('milk.png'))
+
         self.img_dict = {"tile": self.blank_tile,
-            "rock": self.rock, "milk": self.milk}
+            "rock1": self.rock1, "milk": self.milk, "rock2": self.rock2,
+            "rock3": self.rock3}
         self.bkgnd = pygame.image.load(p("arena.png"))
+        self.bkgnd.set_colorkey((0, 0, 0))
+
 
     def get_cell(self, x, y):
         return self.cells[y][x]
@@ -64,8 +70,10 @@ class Map(object):
                 img = self.img_dict[item]
                 x = cell.x * TILE_WIDTH + TILE_XOFF
                 y = cell.y * TILE_HEIGHT + TILE_YOFF
-                if item == "rock":
+                if item in ["rock1", "rock2", "rock3"]:
                     y += ROCK_Y_OFFSET
+                if item == "tile":
+                    continue
                 screen.blit(img, (x, y))
 
     def spawn_rock(self, dont = -1):
@@ -74,7 +82,8 @@ class Map(object):
             to_spawn = random.choice(cells)
             while (to_spawn.x, to_spawn.y) in dont:
                 to_spawn = random.choice(cells)
-            to_spawn.add("rock")
+            to_spawn.add(random.choice(ROCKS))
+        return to_spawn.x, to_spawn.y
 
     def spawn_milk(self):
         cells = self.get_all_empty_cells()
