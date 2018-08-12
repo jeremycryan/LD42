@@ -374,7 +374,7 @@ class Game(object):
             #   DRAW TO SCREEN
             self.screen.fill((0, 0, 0))
             self.display.fill((0, 0, 0))
-            self.display.blit(self.sky, (-self.cam.pos[0]*0.2, -self.cam.pos[1]*0.1))
+            self.display.blit(self.sky, (-self.cam.pos[0]*0.5, -self.cam.pos[1]*0.2))
             self.screen.set_colorkey((0, 0, 0))
 
             for layer in layers:
