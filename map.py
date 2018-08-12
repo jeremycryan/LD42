@@ -2,7 +2,7 @@
 
 import pygame
 import random
-#from game import p
+from game import p
 from sprite_tools import *
 from constants import *
 from copy import deepcopy
@@ -163,10 +163,6 @@ class Cell(object):
         if len(self.contents) > 1:
             return False
         return True
-
-def p(path):
-
-    return path
 
 
 if __name__ == '__main__':

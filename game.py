@@ -9,6 +9,7 @@ from ui import *
 from math import sin
 from copy import deepcopy
 import sys
+import os
 
 #   Pyracy
 from camera_tools import Camera
@@ -335,6 +336,7 @@ class Game(object):
         pygame.mixer.pre_init(44100, -16, 2, 512)
         pygame.init()
         self.mus = pygame.mixer.music.load(p("LD42.wav"))
+        self.tmus = pygame.mixer.Sound(p("LD42_Title.wav"))
         #pygame.mixer.init()
 
         self.display = pygame.display.set_mode((DISPLAY_WIDTH, DISPLAY_HEIGHT))
@@ -396,7 +398,8 @@ class Game(object):
 ###############################################################
 #################### TITLE EFFECT #############################
 ###############################################################
-
+        self.tmus.set_volume(0.25)
+        self.tmus.play(loops=-1)
         while True:
             #   PYGAME EVENTS
             pygame.event.pump()
@@ -461,6 +464,7 @@ class Game(object):
             objects_layer_2]
         self.spawn_milk()
         title_speed = -400
+        self.tmus.fadeout(500)
 
 ##############################################################
 #################### MAIN LOOP ###############################
@@ -574,9 +578,10 @@ class Game(object):
         pass
 
 
-def p(path):
-
-    return path
+def p(relative):
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, relative)
+    return os.path.join(relative)
 
 if __name__ == '__main__':
     game = Game()
