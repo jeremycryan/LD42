@@ -5,7 +5,7 @@ import pygame
 class Bar(object):
 
     def __init__(self, max_val, color = [95, 135, 240],
-        width = 20, height = 100, start_value = 0, pos = (0, 0)):
+        width = 100, height = 20, start_value = 0, pos = (0, 0)):
 
         self.max_val = max_val
         self.color = color
@@ -37,11 +37,18 @@ class Bar(object):
 
         if self.cur_value > 0:
             prop_full = 1.0*self.cur_value/self.max_val
-            bar_value = pygame.Surface((self.width, self.height*prop_full))
+            bar_value = pygame.Surface((self.width*prop_full, self.height))
             bar_value.fill(self.color)
-            off = self.height*(1-prop_full)
-            surf.blit(bar_value, (pos[0] + self.frame_x_border,
-                pos[1]+off+self.frame_y_border))
+            if self.cur_value > 6.5:
+                bar_value.fill((205, 70, 95))
+            off = 0
+            surf.blit(bar_value, (pos[0] + off+ self.frame_x_border,
+                pos[1]+self.frame_y_border))
+
+        shadow = pygame.Surface((self.width + 2*self.frame_x_border, self.height/2 + self.frame_y_border))
+        shadow.fill((255, 255, 255))
+        shadow.set_alpha(60)
+        surf.blit(shadow, pos)
 
     def update(self, dt):
 

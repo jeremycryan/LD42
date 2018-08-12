@@ -7,6 +7,7 @@ from map import *
 from constants import *
 from ui import *
 from math import sin
+from copy import deepcopy
 
 #   Pyracy
 from camera_tools import Camera
@@ -174,7 +175,8 @@ class Player(object):
     def do_dash(self):
         x, y = self.dash_pos(dashing=True)
 
-        self.dash_sound.play()
+        if self.juice > 0:
+            self.dash_sound.play()
         if self.consecutive_rocks > 0:
             self.rock_break_sound.play()
             self.consecutive_rocks = 0
@@ -210,7 +212,7 @@ class Player(object):
                 for item in BREAKABLE:
                     if item in cur_cell.contents:
                         cur_cell.contents.remove(item)
-                        self.consecutive_rocks += 1
+                        self.consecutive_rocks += 100
                         self.score += self.consecutive_rocks
 
 
@@ -254,7 +256,7 @@ class Player(object):
                             spos = (qpos[0] * TILE_WIDTH + TILE_XOFF,
                                 qpos[1] * TILE_HEIGHT + TILE_YOFF)
                             self.rock_effect(spos)
-                            self.consecutive_rocks += 1
+                            self.consecutive_rocks += 100
                             self.score += self.consecutive_rocks
 
         ans = self.dash_pos_recurse((new_x, new_y), dist - 1, dashing=dashing)
@@ -268,6 +270,7 @@ class Player(object):
             cur_cell = map.get_cell(qpos[0], qpos[1])
             if "milk" in cur_cell.contents:
                 cur_cell.contents.remove("milk")
+                map.remove_milk_at_cell(cur_cell)
                 self.pickup_milk()
 
     def pickup_milk(self):
@@ -345,14 +348,16 @@ class Game(object):
         self.title_sprite.add_animation({"idle": title_spritesheet})
         self.title_sprite.start_animation("idle")
 
+        self.high_score = 0
+
 
         pygame.font.init()
         self.coin_font = pygame.font.SysFont('default', 30)
-
+        self.hs_font = pygame.font.SysFont('default', 50)
 
 
         #   Interface
-        self.juice_bar = Bar(MAX_JUICE, start_value = 0, pos = JUICE_BAR_POS)
+        self.juice_bar = Bar(MAX_JUICE, start_value = 0, width = 140, pos = JUICE_BAR_POS)
 
         #   SPRITES
 
@@ -404,7 +409,7 @@ class Game(object):
             self.cam.set_target_center((TILE_XOFF + 32*8,
                 TILE_YOFF - 128 + 12*sin(time.time()*2)))
             self.title_sprite.x_pos = TILE_XOFF + 8*32 - self.title.get_width()/2
-            self.title_sprite.y_pos = TILE_YOFF -256
+            self.title_sprite.y_pos = TILE_YOFF -280
 
             #   DRAW TO SCREEN
             self.screen.fill((0, 0, 0))
@@ -418,12 +423,19 @@ class Game(object):
                     item.update(dt)
                     item.draw(self.screen)
 
+            hs_text = self.hs_font.render("HIGH SCORE: %s" % self.high_score, 50, (1, 0, 0))
+            hs_text = pygame.transform.scale(hs_text, (120, 16))
+            self.screen.blit(hs_text, (TILE_XOFF + 8*32 - hs_text.get_width()/2,
+                TILE_YOFF - 170))
+
+
             text = self.coin_font.render("PRESS ANY KEY TO START", 10,
                 (0, 0, 0))
-            text = pygame.transform.scale(text, (200, 16))
+            text = pygame.transform.scale(text, (240, 18))
             if time.time() % 1 < 0.5:
                 self.display.blit(text, (DISPLAY_WIDTH/2 - text.get_width()/2,
                     16))
+
 
 
 
@@ -440,6 +452,7 @@ class Game(object):
             objects_layer_2]
         self.spawn_milk()
         title_speed = -400
+
 ##############################################################
 #################### MAIN LOOP ###############################
 ##############################################################
@@ -462,12 +475,16 @@ class Game(object):
             dt = self.cam.time_step(dt)
             then = now
 
+
+
             #   PLAYER MOVEMENT/UPDATE
             if len(events):
                 turnover = self.player.test_movement(events, self.map)
                 self.turnover()
                 if 114 in [e.key for e in events]:
                     self.player.reset_sound.play()
+                    self.high_score = max(self.high_score, self.player.score)
+                    pygame.mixer.music.fadeout(1500)
                     break
                 print([i.key for i in events])
 
@@ -534,7 +551,10 @@ class Game(object):
         self.since_rock_spawn += 1
         if self.since_rock_spawn >=4:
             dont = self.player.quarter_positions(self.player.pos)
-            new_rock_x, new_rock_y = self.map.spawn_rock(dont=dont)
+            try:
+                new_rock_x, new_rock_y = self.map.spawn_rock(dont=dont)
+            except:
+                return
             self.rock_spawn_effect(new_rock_x, new_rock_y)
             self.since_rock_spawn = 0
 

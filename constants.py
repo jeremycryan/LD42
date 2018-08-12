@@ -17,10 +17,10 @@ TILE_XOFF, TILE_YOFF = 94, 357
 ROCKS = ["rock1", "rock2", "rock3"]
 
 #   UI
-JUICE_BAR_POS = (30, 20)
+JUICE_BAR_POS = (30, 360)
 INT_WID = 160
-INT_HEI = 80
-INT_BORD = 16
+INT_HEI = 40
+INT_BORD = 30
 
 #   Game parameters
 MAX_JUICE = 7
