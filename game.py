@@ -8,6 +8,7 @@ from constants import *
 from ui import *
 from math import sin
 from copy import deepcopy
+import sys
 
 #   Pyracy
 from camera_tools import Camera
@@ -169,6 +170,10 @@ class Player(object):
                 rat = 20
             else:
                 rat = 50
+        if dt > 0.025:
+            rat *= 0.6
+        if dt > 0.05:
+            rat *= 0.8
         self.sprite.x_pos += xdif*rat*dt
         self.sprite.y_pos += ydif*rat*dt
 
@@ -396,6 +401,10 @@ class Game(object):
             #   PYGAME EVENTS
             pygame.event.pump()
             events = pygame.event.get(pygame.KEYDOWN)
+            quit = pygame.event.get(pygame.QUIT)
+            if len(quit):
+                pygame.quit()
+                sys.exit()
             pygame.event.clear()
             if len(events):
                 break
@@ -466,12 +475,16 @@ class Game(object):
             #   PYGAME EVENTS
             pygame.event.pump()
             events = pygame.event.get(pygame.KEYDOWN)
+            quit = pygame.event.get(pygame.QUIT)
+            if len(quit):
+                pygame.quit()
+                sys.exit()
             pygame.event.clear()
 
             #   TIME STUFF
             now = time.time()
             dt = now - then
-            #print("FPS: %s" % (1/dt))
+            print("FPS: %s" % (1/dt))
             dt = self.cam.time_step(dt)
             then = now
 
