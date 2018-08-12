@@ -30,7 +30,7 @@ class Player(object):
         self.reset_sound.set_volume(0.25)
         #while True: pass
         self.milk_sound = pygame.mixer.Sound(p("milk_pickup.wav"))
-        self.milk_sound.set_volume(0.1)
+        self.milk_sound.set_volume(0.07)
 
         self.zoom_effect_amt = 1.5
 
@@ -432,7 +432,7 @@ class Game(object):
 
             pygame.display.flip()
 
-        pygame.mixer.music.set_volume(0.4)
+        pygame.mixer.music.set_volume(0.6)
         pygame.mixer.music.play(loops=999)
         objects_layer_2.append(self.player)
         layers = [objects_layer_0,
