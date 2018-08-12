@@ -2,7 +2,7 @@
 
 import pygame
 import random
-from game import p
+#from game import p
 from sprite_tools import *
 from constants import *
 
@@ -17,7 +17,6 @@ class Map(object):
             a = [Cell((x, y), ["tile"]) for x in range(x_size)]
             self.cells.append(a)
 
-        print(self)
 
         self.blank_tile = pygame.image.load(p('map_blank.png'))
         self.blank_tile = pygame.transform.scale(self.blank_tile,
@@ -133,6 +132,9 @@ class Cell(object):
             return False
         return True
 
+def p(path):
+
+    return path
 
 
 if __name__ == '__main__':

@@ -8,10 +8,8 @@ from constants import *
 from ui import *
 from math import sin
 
-
-
 #   Pyracy
-from camera_tools import *
+from camera_tools import Camera
 from sprite_tools import *
 from particle_tools import *
 
@@ -19,10 +17,20 @@ class Player(object):
 
     def __init__(self, map, pos = [1, 1], cam = None):
         self.pos = pos
+
         self.focus_pos = (0, 0)
         self.cam = cam
         self.score = 0
         self.consecutive_rocks = 0
+        self.rock_break_sound = pygame.mixer.Sound(p("rock_break.wav"))
+        self.rock_break_sound.set_volume(0.2)
+        self.dash_sound = pygame.mixer.Sound(p("dash_sound.wav"))
+        self.dash_sound.set_volume(0.08)
+        self.reset_sound = pygame.mixer.Sound(p("reset.wav"))
+        self.reset_sound.set_volume(0.25)
+        #while True: pass
+        self.milk_sound = pygame.mixer.Sound(p("milk_pickup.wav"))
+        self.milk_sound.set_volume(0.1)
 
         self.zoom_effect_amt = 1.5
 
@@ -165,7 +173,11 @@ class Player(object):
 
     def do_dash(self):
         x, y = self.dash_pos(dashing=True)
-        self.consecutive_rocks = 0
+
+        self.dash_sound.play()
+        if self.consecutive_rocks > 0:
+            self.rock_break_sound.play()
+            self.consecutive_rocks = 0
 
         # if self.juice >= 5:
         #     for xoff in [-1, 0, 1]:
@@ -259,6 +271,7 @@ class Player(object):
                 self.pickup_milk()
 
     def pickup_milk(self):
+        self.milk_sound.play()
         self.juice = min(self.juice + 1, self.max_juice)
 
     def test_movement(self, events, map):
@@ -310,9 +323,13 @@ class Player(object):
 class Game(object):
 
     def __init__(self):
+
+        pygame.mixer.pre_init(44100, -16, 2, 512)
         pygame.init()
+        #pygame.mixer.init()
 
         self.display = pygame.display.set_mode((DISPLAY_WIDTH, DISPLAY_HEIGHT))
+        pygame.display.set_caption("Rampart")
         self.cam = Camera(self.display)
         self.cam.pos = TILE_XOFF + 32*8, TILE_YOFF - 128
         self.cam.set_pan_pid(1, 0, 0)
@@ -327,6 +344,7 @@ class Game(object):
         self.title_sprite.add_animation({"idle": title_spritesheet})
         self.title_sprite.start_animation("idle")
 
+
         pygame.font.init()
         self.coin_font = pygame.font.SysFont('default', 30)
 
@@ -337,13 +355,15 @@ class Game(object):
 
         #   SPRITES
 
-
-        self.main()
+        while True:
+            self.main()
 
 
     def main(self):
         #self.cam.set_target_zoom(2.0)
         #self.cam.set_target_center((0, 0))
+
+        self.map = Map(MAP_WIDTH, MAP_HEIGHT)
 
         self.player = Player(self.map, [7, 5], cam=self.cam)
         self.player.sprite.start_animation('IdleRight')
@@ -391,10 +411,18 @@ class Game(object):
             self.display.blit(self.sky, (-self.cam.pos[0]*0.5, -self.cam.pos[1]*0.2+40))
             self.screen.set_colorkey((0, 0, 0))
 
+
             for layer in layers:
                 for item in layer:
                     item.update(dt)
                     item.draw(self.screen)
+
+            text = self.coin_font.render("PRESS ANY KEY TO START", 10,
+                (0, 0, 0))
+            text = pygame.transform.scale(text, (200, 16))
+            if time.time() % 1 < 0.5:
+                self.display.blit(text, (DISPLAY_WIDTH/2 - text.get_width()/2,
+                    16))
 
 
 
@@ -410,14 +438,14 @@ class Game(object):
             objects_layer_1,
             objects_layer_2]
         self.spawn_milk()
-        title_speed = -50
+        title_speed = -400
 ##############################################################
 #################### MAIN LOOP ###############################
 ##############################################################
         while True:
 
             self.title_sprite.y_pos -= title_speed *dt
-            title_speed += 300*dt
+            title_speed += 3000*dt
             if self.title_sprite.y_pos < 0 and self.title_sprite in layers[2]:
                 layers[2].remove(self.title_sprite)
 
@@ -429,6 +457,7 @@ class Game(object):
             #   TIME STUFF
             now = time.time()
             dt = now - then
+            #print("FPS: %s" % (1/dt))
             dt = self.cam.time_step(dt)
             then = now
 
@@ -436,7 +465,11 @@ class Game(object):
             if len(events):
                 turnover = self.player.test_movement(events, self.map)
                 self.turnover()
+                if 114 in [e.key for e in events]:
+                    self.player.reset_sound.play()
+                    break
                 print([i.key for i in events])
+
             self.player.test_pickup(self.map)
             self.juice_bar.target_value = self.player.juice
 

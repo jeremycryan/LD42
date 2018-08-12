@@ -13,6 +13,7 @@ class Camera(object):
     slowdowns and zooms. """
 
     def __init__(self, output_display):
+        pass
         """ Init function for camera class """
 
         self.speed = 1.0    #   Proportional speed of capture
@@ -44,7 +45,7 @@ class Camera(object):
         self.zoom_i = 1.0
         self.zoom_d = -0.2
 
-        #   All PID constants
+        #  All PID constants
         self.pids = {'x': (self.pan_p, self.pan_i, self.pan_d),
             'y': (self.pan_p, self.pan_i, self.pan_d),
             'zoom': (self.zoom_p, self.zoom_i, self.zoom_d)}
@@ -61,7 +62,6 @@ class Camera(object):
 
     def set_pan_pid(self, p, i, d):
         """ Modify default pid constants for camera pan """
-
         #   Update constants
         self.pan_p = p
         self.pan_i = i
