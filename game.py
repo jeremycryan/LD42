@@ -6,6 +6,7 @@ import pygame
 from map import *
 from constants import *
 from ui import *
+from math import sin
 
 
 
@@ -16,10 +17,12 @@ from particle_tools import *
 
 class Player(object):
 
-    def __init__(self, map, pos = [2, 2], cam = None):
+    def __init__(self, map, pos = [1, 1], cam = None):
         self.pos = pos
         self.focus_pos = (0, 0)
         self.cam = cam
+        self.score = 0
+        self.consecutive_rocks = 0
 
         self.zoom_effect_amt = 1.5
 
@@ -31,6 +34,8 @@ class Player(object):
         dash_left.reverse(1, 0)
 
         self.sprite = Sprite(fps = 10)
+        self.sprite.x_pos = TILE_XOFF + pos[0]*TILE_WIDTH
+        self.sprite.y_pos = TILE_YOFF + pos[1]*TILE_HEIGHT
         self.sprite.add_animation({'IdleRight': idle_right,
                                     'IdleLeft': idle_left,
                                     'DashRight': dash_right,
@@ -160,6 +165,7 @@ class Player(object):
 
     def do_dash(self):
         x, y = self.dash_pos(dashing=True)
+        self.consecutive_rocks = 0
 
         # if self.juice >= 5:
         #     for xoff in [-1, 0, 1]:
@@ -192,6 +198,8 @@ class Player(object):
                 for item in BREAKABLE:
                     if item in cur_cell.contents:
                         cur_cell.contents.remove(item)
+                        self.consecutive_rocks += 1
+                        self.score += self.consecutive_rocks
 
 
         if self.last_move == "up":
@@ -234,6 +242,8 @@ class Player(object):
                             spos = (qpos[0] * TILE_WIDTH + TILE_XOFF,
                                 qpos[1] * TILE_HEIGHT + TILE_YOFF)
                             self.rock_effect(spos)
+                            self.consecutive_rocks += 1
+                            self.score += self.consecutive_rocks
 
         ans = self.dash_pos_recurse((new_x, new_y), dist - 1, dashing=dashing)
         if ans != 0:
@@ -304,11 +314,23 @@ class Game(object):
 
         self.display = pygame.display.set_mode((DISPLAY_WIDTH, DISPLAY_HEIGHT))
         self.cam = Camera(self.display)
+        self.cam.pos = TILE_XOFF + 32*8, TILE_YOFF - 128
+        self.cam.set_pan_pid(1, 0, 0)
         self.screen = pygame.Surface((GAME_WIDTH, GAME_HEIGHT))
 
         #   Game stuff
         self.map = Map(MAP_WIDTH, MAP_HEIGHT)
         self.sky = pygame.image.load(p("backdrop.png"))
+        self.title = pygame.image.load("rampart.png")
+        title_spritesheet = SpriteSheet("rampart.png", (1, 1), 1)
+        self.title_sprite = Sprite()
+        self.title_sprite.add_animation({"idle": title_spritesheet})
+        self.title_sprite.start_animation("idle")
+
+        pygame.font.init()
+        self.coin_font = pygame.font.SysFont('default', 30)
+
+
 
         #   Interface
         self.juice_bar = Bar(MAX_JUICE, start_value = 0, pos = JUICE_BAR_POS)
@@ -323,14 +345,13 @@ class Game(object):
         #self.cam.set_target_zoom(2.0)
         #self.cam.set_target_center((0, 0))
 
-        self.player = Player(self.map, [2, 2], cam=self.cam)
+        self.player = Player(self.map, [7, 5], cam=self.cam)
         self.player.sprite.start_animation('IdleRight')
         self.since_rock_spawn = 0
-        self.spawn_milk()
 
         objects_layer_0 = [self.map]
         objects_layer_1 = []
-        objects_layer_2 = [self.player]
+        objects_layer_2 = [self.title_sprite]
         ui = [self.juice_bar]
         layers = [objects_layer_0,
             objects_layer_1,
@@ -341,14 +362,69 @@ class Game(object):
 
         self.cam.zoom_to(1.0)
 
+###############################################################
+#################### TITLE EFFECT #############################
+###############################################################
+
         while True:
+            #   PYGAME EVENTS
+            pygame.event.pump()
+            events = pygame.event.get(pygame.KEYDOWN)
+            pygame.event.clear()
+            if len(events):
+                break
+
+            #   TIME STUFF
+            now = time.time()
+            dt = now - then
+            dt = self.cam.time_step(dt)
+            then = now
+
+            self.cam.set_target_center((TILE_XOFF + 32*8,
+                TILE_YOFF - 128 + 12*sin(time.time()*2)))
+            self.title_sprite.x_pos = TILE_XOFF + 8*32 - self.title.get_width()/2
+            self.title_sprite.y_pos = TILE_YOFF -256
+
+            #   DRAW TO SCREEN
+            self.screen.fill((0, 0, 0))
+            self.display.fill((0, 0, 0))
+            self.display.blit(self.sky, (-self.cam.pos[0]*0.5, -self.cam.pos[1]*0.2+40))
+            self.screen.set_colorkey((0, 0, 0))
+
+            for layer in layers:
+                for item in layer:
+                    item.update(dt)
+                    item.draw(self.screen)
+
+
+
+            #       FINAL BLIT FOR NORMAL THINGS
+            self.cam.capture(self.screen)
+
+            pygame.display.flip()
+
+
+
+        objects_layer_2.append(self.player)
+        layers = [objects_layer_0,
+            objects_layer_1,
+            objects_layer_2]
+        self.spawn_milk()
+        title_speed = -50
+##############################################################
+#################### MAIN LOOP ###############################
+##############################################################
+        while True:
+
+            self.title_sprite.y_pos -= title_speed *dt
+            title_speed += 300*dt
+            if self.title_sprite.y_pos < 0 and self.title_sprite in layers[2]:
+                layers[2].remove(self.title_sprite)
 
             #   PYGAME EVENTS
             pygame.event.pump()
             events = pygame.event.get(pygame.KEYDOWN)
             pygame.event.clear()
-
-            print(pygame.key.get_pressed())
 
             #   TIME STUFF
             now = time.time()
@@ -366,15 +442,16 @@ class Game(object):
 
 
 
-            self.cam.set_pan_pid(3, 0.1, -0.3)
-            self.cam.set_target_center(self.player.focus_pos)
+            #self.cam.set_pan_pid(3, 0.1, -0.3)
+            self.cam.set_target_center((self.player.focus_pos[0] + 32,
+                self.player.focus_pos[1] + 32))
             #self.cam.set_target_zoom(1.0 - 0.01*self.player.juice)
 
 
             #   DRAW TO SCREEN
             self.screen.fill((0, 0, 0))
             self.display.fill((0, 0, 0))
-            self.display.blit(self.sky, (-self.cam.pos[0]*0.5, -self.cam.pos[1]*0.2))
+            self.display.blit(self.sky, (-self.cam.pos[0]*0.5, -self.cam.pos[1]*0.2+40))
             self.screen.set_colorkey((0, 0, 0))
 
             for layer in layers:
@@ -390,6 +467,22 @@ class Game(object):
                 item.update(dt)
                 item.draw(self.display)
 
+            #   Coin amt
+            ui_back = pygame.Surface((INT_WID, INT_HEI))
+            ui_back.set_alpha(100)
+            self.display.blit(ui_back, (INT_BORD,
+                DISPLAY_HEIGHT - INT_HEI - INT_BORD))
+            string = str(self.player.score)
+            # digits = 6
+            # if len(string) < digits:
+            #     plus = "0"*(digits - len(string))
+            #     string = plus+string
+            text = self.coin_font.render(string, False, (255, 255, 255))
+            text.set_alpha(180)
+            text_pos = (INT_BORD + INT_WID - text.get_width() - 8,
+                DISPLAY_HEIGHT - INT_BORD - INT_HEI + 8)
+            self.display.blit(text, text_pos)
+
             pygame.display.flip()
 
     def spawn_milk(self):
@@ -401,6 +494,7 @@ class Game(object):
 
     def turnover(self):
 
+        self.cam.set_pan_pid(3, 0.1, -0.3)
         self.spawn_milk()
 
         self.since_rock_spawn += 1

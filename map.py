@@ -64,7 +64,7 @@ class Map(object):
         pass
 
     def draw(self, screen):
-        screen.blit(self.bkgnd, (0, 0))
+        screen.blit(self.bkgnd, (0, 200))
         for cell in self.get_all_cells():
             for item in cell.contents:
                 img = self.img_dict[item]
